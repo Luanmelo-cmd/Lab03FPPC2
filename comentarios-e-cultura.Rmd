@@ -1,0 +1,153 @@
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(here)
+library(viridis)
+library(ggplot2)
+library(readr)
+
+
+knitr::opts_chunk$set(tidy = FALSE,
+                      fig.width = 6,
+                      fig.height = 5)
+```
+
+```{r read}
+dados = read_csv(
+    here::here("C:/LabDadosR/lab03/participation-per-country.csv"),
+    col_types = cols(
+        .default = col_double(),
+        site = col_character(),
+        country = col_character(),
+        geo = col_character(),
+        four_regions = col_character(),
+        eight_regions = col_character(),
+        six_regions = col_character(),
+        `World bank income group 2017` = col_character()
+    )
+) %>% 
+    filter(usuarios > 200)
+glimpse(dados)
+```
+
+Estamos interessados na relação entre quanto as pessoas de diferentes países comentam em questões dos outros. A proporção das pessoas do país que comentou nas questões de outros está medido na variável `comentaram_prop`. 
+
+Considerando essa variável, queremos examinar a relação entre ela e o quão hierárquicas são as relações em um país (`PDI`). Queremos também levar em conta o quanto as pessoas daquele país têm acesso à Internet (`Internet`) e qual o tamanho da base de dados que detectamos daquele país (`usuarios`). 
+
+## Examinando essa relação
+
+Faça uma visualização que usa os princípios de eficácia no projeto de visualizações para facilitar as comparações que você acha que são as mais importantes para entendermos esse contexto. 
+
+```{r rodacodigo01}
+# Ler o arquivo CSV
+data <- read_csv("C:/LabDadosR/lab03/participation-per-country.csv")
+
+# Selecionar as colunas de interesse
+data <- data %>% select(country, PDI, Internet, usuarios, comentaram_prop,six_regions) 
+
+
+# Visualizar os primeiros registros do dataset
+head(data)
+
+# Criar um modelo de regressão linear múltipla
+modelo <- lm(comentaram_prop ~ PDI + Internet + usuarios, data = data)
+
+# Resumo do modelo
+summary(modelo)
+
+# Agrupar por continente e calcular a média da proporção de comentários
+data_continents <- data %>%
+ group_by(six_regions) %>%
+ summarise(mean_comentaram_prop = mean(comentaram_prop, na.rm = TRUE))
+
+# Plotar a relação entre comentaram_prop e PDI, ajustando para Internet e usuarios
+ggplot(data, aes(x = PDI, y = comentaram_prop, size = usuarios, color = Internet)) +
+geom_point(alpha = 0.8) +
+ geom_smooth(method = "lm", se = FALSE, color = "blue") +
+ labs(title = "Relação entre Comentários e PDI",
+ x = "Índice de Distância de Poder (PDI)",
+ y = "Proporção de Comentários",
+ size = "Número de Usuários",
+ color = "Acesso à Internet (%)") +
+  theme_minimal()
+ 
+# Criar um diagrama de colunas para os continentes
+ggplot(data_continents, aes(x = reorder(six_regions, mean_comentaram_prop), y = mean_comentaram_prop, fill = six_regions)) +
+ geom_col() +
+ geom_text(aes(label = round(mean_comentaram_prop, 2)), vjust = -0.5, size = 3.5) +
+labs(title = "Proporção Média de Comentários por Continente",
+ x = "Continente",
+ y = "Proporção Média de Comentários",
+ fill = "Continente") +
+ theme_minimal()
+```
+
+## Outras formas de ver
+
+Em seguida, faça 5 visualizações que usem as mesmas variáveis e também pontos, mas que sejam **menos eficazes** que a que você escolheu acima. 
+
+```{r rodacodigo02}
+#Forma01 Gráfico apenas de pontos
+ggplot(data, aes(x = PDI, y = comentaram_prop, size = usuarios, color = Internet)) +
+ geom_point(alpha = 0.8) 
+```
+
+```{r rodacodigo03}
+#Forma02 Gráfico de barras
+ggplot(data, aes(x = PDI, y = comentaram_prop, size = usuarios, color = Internet)) +
+geom_bar(stat = "identity", position = "dodge") +
+
+geom_text(aes(label = round(comentaram_prop, 2)), 
+            position = position_dodge(width = 0.9), 
+            vjust = -0.8)
+```
+
+```{r rodacodigo04}
+#Forma03 Gráfico de Linha
+ggplot(data, aes(x = PDI, y = comentaram_prop, group = country, color = Internet)) +
+geom_line() +
+geom_point(size = 2) +
+labs(title = "Relação entre Comentários e PDI por País",
+x = "Índice de Distância de Poder (PDI)",
+y = "Proporção de Comentários",
+color = "Acesso à Internet (%)") +
+theme_classic()
+```
+
+#Forma04 Gráfico de Dispersão tema cinza
+
+```{r rodacodigo05}
+
+ggplot(data, aes(x = PDI, y = comentaram_prop, size = usuarios, color = Internet)) +
+geom_point(alpha = 0.2) +
+geom_smooth(method = "lm", se = FALSE, color = "Black") +
+labs(title = "Relação entre Comentários e PDI",
+x = "Índice de Distância de Poder (PDI)",
+y = "Proporção de Comentários",
+size = "Número de Usuários",
+color = "Acesso à Internet (%)") +
+theme_gray()
+```
+#Forma05 diagrama de colunas
+
+```{r rodacodigo06}
+ggplot(data, aes(x = reorder(country, comentaram_prop), y = comentaram_prop, fill = Internet)) +
+ geom_col() +
+ coord_flip() +
+ labs(title = "Proporção de Comentários por País",
+ x = "País",
+ y = "Proporção de Comentários",
+ fill = "Acesso à Internet (%)") +
+ theme_minimal()
+
+```
+
+
+
+
+
+## Bônus
+
+Inclua o continente dos países (`six_regions`) na visualização.
+
